@@ -1,0 +1,111 @@
+﻿<Window
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:chartingToolkit="clr-namespace:System.Windows.Controls.DataVisualization.Charting;assembly=System.Windows.Controls.DataVisualization.Toolkit"
+        xmlns:local="clr-namespace:HmiExample" 
+        x:Name="window" 
+        x:Class="HmiExample.MainWindow"
+        Title="PLCServer example" 
+        Height="577" 
+        Width="625" 
+        Closing="Window_Closing"
+    >
+    <Window.Resources>
+    </Window.Resources>
+    <Grid Background="#FFE2E2E2" Height="545">
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+        </Grid.RowDefinitions>
+        <StatusBar Grid.Row="2">
+            <StatusBarItem>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Connection state: "/>
+                    <TextBlock x:Name="lblConnectionState"/>
+                </StackPanel>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Cyclic read time: "/>
+                    <TextBlock x:Name="lblReadTime"/>
+                </StackPanel>
+            </StatusBarItem>
+        </StatusBar>
+
+        <!-- Real -->
+
+        <!-- Word (16 bit +/-) -->
+
+        <!-- Dint (32 bit signed) -->
+
+        <!-- DWord (16 bit unsigned) -->
+        <Border BorderBrush="Black" BorderThickness="0" Margin="0" Grid.Row="1" Height="150">
+            <chartingToolkit:Chart Title="" Padding="10">
+                <chartingToolkit:Chart.Axes>
+                    <chartingToolkit:CategoryAxis SeriesHost="{x:Null}"/>
+                </chartingToolkit:Chart.Axes>
+                <chartingToolkit:LineSeries DependentValuePath="Y" IndependentValuePath="X" TransitionDuration="0" ItemsSource="{Binding LP, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:MainWindow}}}">
+                    <chartingToolkit:LineSeries.DependentRangeAxis>
+                        <chartingToolkit:LinearAxis x:Name="laAxis" Minimum="{Binding MinimumRange, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:MainWindow}}}" Maximum="{Binding MaximumRange, Mode=TwoWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:MainWindow}}, UpdateSourceTrigger=PropertyChanged}" Orientation="Y"/>
+                    </chartingToolkit:LineSeries.DependentRangeAxis>
+                </chartingToolkit:LineSeries>
+            </chartingToolkit:Chart>
+        </Border>
+        <Slider x:Name="sliderLoopTime" HorizontalAlignment="Left" Margin="513,265,0,0" VerticalAlignment="Top" Width="87" Maximum="1000" SmallChange="1" Value="{Binding LoopTime, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:MainWindow}}}" TickPlacement="BottomRight" Interval="100" UseLayoutRounding="False"/>
+        <Slider x:Name="sliderLoopTimeDisplayRange" HorizontalAlignment="Left" Margin="513,344,0,0" VerticalAlignment="Top" Width="87" Maximum="1000" SmallChange="1" Value="{Binding LoopTimeDisplayRange, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:MainWindow}}}" TickPlacement="BottomRight" Interval="100"/>
+        <Slider x:Name="sliderPlcLoopTime" HorizontalAlignment="Left" Margin="513,304,0,0" VerticalAlignment="Top" Width="87" Maximum="1000" SmallChange="1" TickPlacement="BottomRight" Interval="100" Value="{Binding PlcLoopTime, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:MainWindow}}}"/>
+        <Label Content="LoopTime" HorizontalAlignment="Left" Margin="417,263,0,0" VerticalAlignment="Top" />
+        <Label Content="PLC LoopTime" HorizontalAlignment="Left" Margin="417,302,0,0" VerticalAlignment="Top" />
+        <Label Content="Display Range" HorizontalAlignment="Left" Margin="417,342,0,0" VerticalAlignment="Top" />
+        <Button x:Name="btnAddTag" Content="Add" HorizontalAlignment="Left" Height="25" Margin="411,150,0,0" VerticalAlignment="Top" Width="91" Click="btnAddTag_Click"/>
+        <Button x:Name="btnDeleteTag" Content="Delete" HorizontalAlignment="Left" Height="25" Margin="411,180,0,0" VerticalAlignment="Top" Width="91" Click="btnDeleteTag_Click" IsEnabled="False"/>
+
+        <ListView x:Name="listviewVars" HorizontalAlignment="Left" Height="113" Margin="10,150,0,0" VerticalAlignment="Top" Width="389" ItemsSource="{Binding ListTagItems}" SelectionChanged="listviewVars_SelectionChanged">
+
+            <!--<ListView.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text=" PLCName "/>
+                        <TextBlock Text="{Binding PLCName}"/>
+                        <TextBlock Text=" Name "/>
+                        <TextBlock Text="{Binding Name}"/>
+                        <TextBlock Text=" Type "/>
+                        <TextBlock Text="{Binding Type}"/>
+                        <TextBlock Text=" Valore "/>
+                        <TextBlock Text="{Binding TagValue}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListView.ItemTemplate>-->
+
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn DisplayMemberBinding="{Binding PLCName}"  Header="PLC" />
+                    <GridViewColumn DisplayMemberBinding="{Binding Name}"  Header="Name" />
+                    <GridViewColumn DisplayMemberBinding="{Binding Type}"  Header="Type" />
+                    <GridViewColumn DisplayMemberBinding="{Binding Value}"  Header="Value" />
+                </GridView>
+            </ListView.View>
+
+        </ListView>
+        <Button x:Name="btnConnect" Content="Connect" HorizontalAlignment="Left" Height="25" Margin="411,80,0,0" VerticalAlignment="Top" Width="91" Click="btnConnect_Click" IsEnabled="False"/>
+        <Button x:Name="btnDisconnect" Content="Disconnect" HorizontalAlignment="Left" Height="25" Margin="411,111,0,0" VerticalAlignment="Top" Width="91" Click="btnDisconnect_Click" IsEnabled="False"/>
+
+
+        <ListView x:Name="listviewPLCs" HorizontalAlignment="Left" Height="117" Margin="12,19,0,0" VerticalAlignment="Top" Width="387" ItemsSource="{Binding ListPLCItems}" SelectionChanged="listviewPLCs_SelectionChanged">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn DisplayMemberBinding="{Binding Name}"  Header="Name" />
+                    <GridViewColumn DisplayMemberBinding="{Binding IPAddress}"  Header="IPAddress" />
+                    <GridViewColumn DisplayMemberBinding="{Binding Rack}"  Header="Rack" />
+                    <GridViewColumn DisplayMemberBinding="{Binding Slot}"  Header="Slot" />
+                    <GridViewColumn DisplayMemberBinding="{Binding ConnectionStatus}"  Header="Status" />
+                </GridView>
+            </ListView.View>
+        </ListView>
+        <Button x:Name="btnAdd" Content="Add" HorizontalAlignment="Left" Height="25" Margin="411,19,0,0" VerticalAlignment="Top" Width="91" Click="btnAdd_Click"/>
+        <Button x:Name="btnDelete" Content="Delete" HorizontalAlignment="Left" Height="25" Margin="411,50,0,0" VerticalAlignment="Top" Width="91" Click="btnDelete_Click"/>
+
+    </Grid>
+</Window>
