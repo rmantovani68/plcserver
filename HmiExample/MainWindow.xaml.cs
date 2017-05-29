@@ -144,7 +144,7 @@ namespace HmiExample
                     string[] var2 = var1[1].Split(':');
                     if (var2.Count() == 2)
                     {
-                        var tag = new TagItem() { PLCName = var1[0], Name = var2[0], Type=var2[1] };
+                        var tag = new TagItem() { PLCName = var1[0], Address = var2[0], Type = var2[1] };
 
                         // controlla che plcname sia un plc connesso
                         // ...

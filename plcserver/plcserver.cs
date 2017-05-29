@@ -88,14 +88,17 @@ namespace plcserver
                 // Get message data
                 var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as MsgData;
 
+                // Acknowledge that message is properly handled and processed. So, it will be deleted from queue.
+                e.Message.Acknowledge();
+
                 switch (MsgData.MsgCode)
                 {
-                    case MsgCodes.RemovePLCTag:
-                        RemovePLCTag(Message);
+                    case MsgCodes.ConnectSubscriber:
+                        ConnectSubscriber(Message);
                         break;
 
-                    case MsgCodes.RemovePLCTags:
-                        RemovePLCTags(Message);
+                    case MsgCodes.DisconnectSubscriber:
+                        DisconnectSubscriber(Message);
                         break;
 
                     case MsgCodes.SubscribePLCTag:
@@ -104,6 +107,14 @@ namespace plcserver
 
                     case MsgCodes.SubscribePLCTags:
                         SubscribePLCTags(Message);
+                        break;
+
+                    case MsgCodes.RemovePLCTag:
+                        RemovePLCTag(Message);
+                        break;
+
+                    case MsgCodes.RemovePLCTags:
+                        RemovePLCTags(Message);
                         break;
 
                     case MsgCodes.GetSubscribedPLCTags:
@@ -119,11 +130,11 @@ namespace plcserver
                         break;
 
                     case MsgCodes.SetPLCTag:
-                        SetPLCTags(Message);
+                        SetPLCTag(Message);
                         break;
 
                     case MsgCodes.GetPLCTag:
-                        GetPLCTags(Message);
+                        GetPLCTag(Message);
                         break;
 
                     case MsgCodes.StartCheckPLCTags:
@@ -153,152 +164,268 @@ namespace plcserver
                 Logger.Warn(ex.Message, ex);
             }
 
-            // Acknowledge that message is properly handled and processed. So, it will be deleted from queue.
-            e.Message.Acknowledge();
+        }
+
+        private bool ConnectSubscriber(IIncomingMessage Message)
+        {
+            bool RetValue = true;
+
+            // get msg application data
+            var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as MsgData;
+
+            Logger.InfoFormat("{1} da {0}", Message.SourceApplicationName, MsgData.MsgCode);
+            
+            // gestione subscriptions
+            if (!_Subs.ContainsKey(Message.SourceApplicationName))
+            {
+                _Subs.Add(Message.SourceApplicationName, new HashSet<Subscription>());
+            }
+            else
+            {
+                foreach (var sub in _Subs[Message.SourceApplicationName].ToList())
+                {
+                    RemovePLCTag(Message.SourceApplicationName, new PLCTag() { PLCName = sub.PLCName, Address = sub.TagAddress });
+                }
+            }
+#if eliminato
+            /* invio messaggio di risposta */
+            RetValue = SendResponse(Message, RetValue);
+#endif
+            return RetValue;
+        }
+
+        private bool DisconnectSubscriber(IIncomingMessage Message)
+        {
+            bool RetValue = true;
+
+            // get msg application data
+            var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as MsgData;
+
+            Logger.InfoFormat("{1} da {0}", Message.SourceApplicationName, MsgData.MsgCode);
+
+            // gestione subscriptions
+            if (_Subs.ContainsKey(Message.SourceApplicationName))
+            {
+                foreach (var sub in _Subs[Message.SourceApplicationName].ToList())
+                {
+                    RemovePLCTag(Message.SourceApplicationName, new PLCTag() { PLCName = sub.PLCName, Address = sub.TagAddress });
+                }
+                _Subs.Remove(Message.SourceApplicationName);
+            }
+            else
+            {
+                // non esiste !
+                Logger.WarnFormat("{0} non sottoscritto!", Message.SourceApplicationName);
+                RetValue = false;
+            }
+
+#if eliminato
+            /* invio messaggio di risposta */
+            RetValue = SendResponse(Message, RetValue);
+#endif
+            return RetValue;
         }
 
         private bool ConnectPLC(IIncomingMessage Message)
         {
             bool RetValue = true;
-            PLCConnectionStatus ConnectionStatus;
 
             // get msg application data
             var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as PLCConnectionData;
 
             Logger.InfoFormat("{1}-{2}-{3}-{4}-{5}-{6} da {0}", Message.SourceApplicationName, MsgData.PLCName, MsgData.Cputype.ToString(), MsgData.IpAddress, MsgData.Rack, MsgData.Slot, MsgData.Delay);
 
-            if (_PLCs.ContainsKey(MsgData.PLCName))
+            if (!_Subs.ContainsKey(Message.SourceApplicationName))
             {
-                // log
-                Logger.WarnFormat("PLC [{1}] already connected", MsgData.PLCName);
-                ConnectionStatus = PLCConnectionStatus.Connected;
+                Logger.WarnFormat("[{0}] not subscribed", Message.SourceApplicationName);
                 RetValue = false;
             }
-            else
+
+            if (RetValue == true)
             {
-                try
-                {
-
-                    var plc = new Plc(MsgData.PLCName, MsgData.Cputype, MsgData.IpAddress, MsgData.Rack, MsgData.Slot, MsgData.Delay);
-
-                    _PLCs.Add(MsgData.PLCName, plc);
-
-                    // associo l'evento di changed value sui tags sottoscritti
-                    plc.TagChangedValue += plc_TagChangedValue;
-
-                    ConnectionStatus = PLCConnectionStatus.Connected;
-                }
-                catch (Exception exc)
+                if (_PLCs.ContainsKey(MsgData.PLCName))
                 {
                     // log
-                    Logger.WarnFormat("PLC [{0}] error in connection : {1}", MsgData.PLCName, exc.Message);
-
-                    ConnectionStatus = PLCConnectionStatus.NotConnected;
+                    Logger.WarnFormat("PLC [{0}] already connected", MsgData.PLCName);
                     RetValue = false;
                 }
+                else
+                {
+                    try
+                    {
+
+                        var plc = new Plc(MsgData.PLCName, MsgData.Cputype, MsgData.IpAddress, MsgData.Rack, MsgData.Slot, MsgData.Delay);
+
+                        _PLCs.Add(MsgData.PLCName, plc);
+
+                        // associo l'evento di changed value sui tags sottoscritti
+                        plc.TagChangedValue += plc_TagChangedValue;
+
+                    }
+                    catch (Exception exc)
+                    {
+                        // log
+                        Logger.WarnFormat("PLC [{0}] error in connection : {1}", MsgData.PLCName, exc.Message);
+
+                        RetValue = false;
+                    }
+                }
             }
+
+#if eliminato
             /* invio messaggio di risposta */
-
-            //Create a DotNetMQ Message to respond
-            var ResponseMessage = Message.CreateResponseMessage();
-
-            //Create a message
-            var StatusData = new PLCStatusData
-            {
-                PLCName = MsgData.PLCName,
-                Status = ConnectionStatus
-            };
-
-            //Set message data
-            ResponseMessage.MessageData = GeneralHelper.SerializeObject(StatusData);
-            ResponseMessage.TransmitRule = MessageTransmitRules.NonPersistent;
-
-            try
-            {
-                //Send message
-                ResponseMessage.Send();
-
-                Logger.InfoFormat("Inviata Risposta a {0}", ResponseMessage.DestinationApplicationName);
-            }
-            catch (Exception exc)
-            {
-                // non sono riuscito a inviare il messaggio
-                Logger.WarnFormat("Risposta non inviata - {0}", exc.Message);
-                RetValue = false;
-            }
-
+            RetValue = SendResponse(Message, RetValue);
+#endif
             return RetValue;
         }
 
         private bool DisconnectPLC(IIncomingMessage Message)
         {
             bool RetValue = true;
-            PLCConnectionStatus ConnectionStatus;
 
             // get msg application data
             var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as PLCData;
 
             Logger.InfoFormat("{1} da {0}", Message.SourceApplicationName, MsgData.PLCName);
 
-            if (!_PLCs.ContainsKey(MsgData.PLCName))
+            if (!_Subs.ContainsKey(Message.SourceApplicationName))
             {
-                // log
-                Logger.WarnFormat("PLC [{0}] not connected", MsgData.PLCName);
-                ConnectionStatus = PLCConnectionStatus.NotConnected;
+                Logger.WarnFormat("[{0}] not subscribed", Message.SourceApplicationName);
                 RetValue = false;
             }
-            else
+
+            if (RetValue == true)
             {
-                try
-                {
-                    /* Disconnetto */
-                    var plc = _PLCs[MsgData.PLCName];
-
-                    plc.Disconnect();
-
-                    /* elimino dalla lista */
-                    _PLCs.Remove(MsgData.PLCName);
-
-                    ConnectionStatus = PLCConnectionStatus.NotConnected;
-                }
-                catch (Exception exc)
+                if (!_PLCs.ContainsKey(MsgData.PLCName))
                 {
                     // log
-                    Logger.WarnFormat("PLC [{0}] error in disconnection : {1}", MsgData.PLCName, exc.Message);
-                    ConnectionStatus = PLCConnectionStatus.NotConnected;
+                    Logger.WarnFormat("PLC [{0}] not connected", MsgData.PLCName);
                     RetValue = false;
                 }
+                else
+                {
+                    try
+                    {
+                        /* Disconnetto */
+                        var plc = _PLCs[MsgData.PLCName];
+
+                        plc.Disconnect();
+
+                        /* elimino dalla lista */
+                        _PLCs.Remove(MsgData.PLCName);
+
+                        /* elimino le sottoscrizioni associate */
+
+
+                    }
+                    catch (Exception exc)
+                    {
+                        // log
+                        Logger.WarnFormat("PLC [{0}] error in disconnection : {1}", MsgData.PLCName, exc.Message);
+                        RetValue = false;
+                    }
+                }
             }
+#if eliminato
+            /* invio messaggio di risposta */
+            RetValue = SendResponse(Message, RetValue);
+#endif
+            return RetValue;
+        }
 
-            //Create a DotNetMQ Message to send 
-            var ResponseMessage = Message.CreateResponseMessage();
+        private bool SubscribePLCTag(string subscriber, PLCTag tag)
+        {
+            bool RetValue = true;
 
-            //Create a message
-            var MsgStatus = new PLCStatusData
+            if (!_Subs.ContainsKey(subscriber))
             {
-                PLCName = MsgData.PLCName,
-                Status = ConnectionStatus
-            };
-
-            //Set message data
-            ResponseMessage.MessageData = GeneralHelper.SerializeObject(MsgStatus);
-            ResponseMessage.TransmitRule = MessageTransmitRules.NonPersistent;
-
-            try
-            {
-                //Send status message in answer
-                ResponseMessage.Send();
-
-                Logger.InfoFormat("Inviata Risposta [{0}] a {1}", ConnectionStatus, ResponseMessage.DestinationApplicationName);
-            }
-            catch (Exception exc)
-            {
-                // non sono riuscito a inviare il messaggio
-                Logger.WarnFormat("Risposta non inviata : {0}", exc.Message);
+                Logger.WarnFormat("[{0}] not subscribed", subscriber);
                 RetValue = false;
+            }
+
+            if (RetValue == true)
+            {
+                /* verifico esistenza PLC interessato */
+                if (!_PLCs.ContainsKey(tag.PLCName))
+                {
+                    // log
+                    Logger.WarnFormat("PLC [{0}] non presente", tag.PLCName);
+
+                    RetValue = false;
+                }
+                else
+                {
+                    try
+                    {
+                        /* aggiungo tag */
+                        _PLCs[tag.PLCName].AddTag(tag.Address);
+
+                        // gestione subscriptions
+                        if (!_Subs.ContainsKey(subscriber))
+                        {
+                            _Subs.Add(subscriber, new HashSet<Subscription>());
+                        }
+
+                        _Subs[subscriber].Add(new Subscription(tag.PLCName, tag.Address));
+                    }
+                    catch (Exception exc)
+                    {
+                        // log
+                        Logger.WarnFormat("PLC [{0}] error adding tag {1} : {2}", tag.PLCName, tag.Address, exc.Message);
+                        RetValue = false;
+                    }
+                }
             }
             return RetValue;
         }
+
+        private bool RemovePLCTag(string subscriber, PLCTag tag)
+        {
+            bool RetValue = true;
+
+            Logger.InfoFormat("{1}/{2} da {0}", subscriber, tag.PLCName, tag.Address);
+
+            if (!_Subs.ContainsKey(subscriber))
+            {
+                Logger.WarnFormat("[{0}] not subscribed", subscriber);
+                RetValue = false;
+            }
+
+            if (RetValue == true)
+            {
+
+
+                /* verifico esistenza PLC interessato */
+                if (!_PLCs.ContainsKey(tag.PLCName))
+                {
+                    Logger.WarnFormat("PLC [{0}] not present", tag.PLCName);
+
+                    RetValue = false;
+                }
+                else
+                {
+                    try
+                    {
+                        /* rimuovo tag */
+                        _PLCs[tag.PLCName].RemoveTag(tag.Address);
+
+                        // gestione subscriptions
+                        if (_Subs.ContainsKey(subscriber))
+                        {
+                            _Subs[subscriber].Remove(new Subscription(tag.PLCName, tag.Address));
+                        }
+                    }
+                    catch (Exception exc)
+                    {
+                        // log
+                        Logger.WarnFormat("PLC [{0}] error removing tag {1} : {2}", tag.PLCName, tag.Address, exc.Message);
+                        RetValue = false;
+                    }
+                }
+            }
+            return RetValue;
+        }
+
 
         private bool SubscribePLCTag(IIncomingMessage Message)
         {
@@ -306,71 +433,19 @@ namespace plcserver
 
             // get msg application data
             var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as PLCTagData;
+            var tag = MsgData.Tag;
 
-            Logger.InfoFormat("{1}/{2} da {0}", Message.SourceApplicationName, MsgData.Tag.PLCName, MsgData.Tag.Name);
+            Logger.InfoFormat("{1}/{2} da {0}", Message.SourceApplicationName, tag.PLCName, tag.Address);
 
-            /* verifico esistenza PLC interessato */
-            if (!_PLCs.ContainsKey(MsgData.Tag.PLCName))
-            {
-                // log
-                Logger.WarnFormat("PLC [{0}] non presente", MsgData.Tag.PLCName);
+            RetValue = SubscribePLCTag(Message.SourceApplicationName, tag);
 
-                RetValue = false;
-            }
-            else
-            {
-                try
-                {
-                    /* aggiungo tag */
-                    _PLCs[MsgData.Tag.PLCName].AddTag(MsgData.Tag.Name);
-
-                    // gestione subscriptions
-                    if (!_Subs.ContainsKey(Message.SourceApplicationName))
-                    {
-                        _Subs.Add(Message.SourceApplicationName, new HashSet<Subscription>());
-                    }
-
-                    _Subs[Message.SourceApplicationName].Add(new Subscription(MsgData.Tag.PLCName, MsgData.Tag.Name));
-                }
-                catch (Exception exc)
-                {
-                    // log
-                    Logger.WarnFormat("PLC [{0}] error adding tag {1} : {2}", MsgData.Tag.PLCName, MsgData.Tag.Name, exc.Message);
-                    RetValue = false;
-                }
-            }
-
+#if eliminato
             /* invio messaggio di risposta */
-
-            //Create a DotNetMQ Message to respond
-            var ResponseMessage = Message.CreateResponseMessage();
-
-            var ResponseData = new ResponseData
-            {
-                Response = RetValue
-            };
-
-            //Set message data
-            ResponseMessage.MessageData = GeneralHelper.SerializeObject(ResponseData);
-            ResponseMessage.TransmitRule = MessageTransmitRules.NonPersistent;
-
-            try
-            {
-                //Send message
-                ResponseMessage.Send();
-
-                Logger.InfoFormat("Inviata Risposta a {0}", ResponseMessage.DestinationApplicationName);
-            }
-            catch (Exception exc)
-            {
-                // non sono riuscito a inviare il messaggio
-                Logger.WarnFormat("Risposta non inviata - {0}", exc.Message);
-                RetValue = false;
-            }
-
+            RetValue = SendResponse(Message, RetValue);
+#endif
             return RetValue;
         }
-
+        
         private bool RemovePLCTag(IIncomingMessage Message)
         {
             bool RetValue = true;
@@ -379,67 +454,15 @@ namespace plcserver
             var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as PLCTagData;
             var tag = MsgData.Tag;
 
-            Logger.InfoFormat("{1}/{2} da {0}", Message.SourceApplicationName, tag.PLCName, tag.Name);
+            RetValue = RemovePLCTag(Message.SourceApplicationName, tag);
 
-            /* verifico esistenza PLC interessato */
-            if (!_PLCs.ContainsKey(tag.PLCName))
-            {
-                Logger.WarnFormat("PLC [{0}] not present", tag.PLCName);
-
-                RetValue = false;
-            }
-            else
-            {
-                try
-                {
-                    /* rimuovo tag */
-                    _PLCs[tag.PLCName].RemoveTag(tag.Name);
-
-                    // gestione subscriptions
-                    if (_Subs.ContainsKey(Message.SourceApplicationName))
-                    {
-                        _Subs[Message.SourceApplicationName].Remove(new Subscription(tag.PLCName, tag.Name));
-                    }
-                }
-                catch (Exception exc)
-                {
-                    // log
-                    Logger.WarnFormat("PLC [{0}] error removing tag {1} : {2}", tag.PLCName, tag.Name, exc.Message);
-                    RetValue = false;
-                }
-            }
-
+#if eliminato
             /* invio messaggio di risposta */
-
-            //Create a DotNetMQ Message to respond
-            var ResponseMessage = Message.CreateResponseMessage();
-
-            //Create a message
-            var ResponseData = new ResponseData
-            {
-                Response = RetValue
-            };
-
-            //Set message data
-            ResponseMessage.MessageData = GeneralHelper.SerializeObject(ResponseData);
-            ResponseMessage.TransmitRule = MessageTransmitRules.NonPersistent;
-
-            try
-            {
-                //Send message
-                ResponseMessage.Send();
-
-                Logger.InfoFormat("Inviata Risposta a {0}", ResponseMessage.DestinationApplicationName);
-            }
-            catch (Exception exc)
-            {
-                // non sono riuscito a inviare il messaggio
-                Logger.WarnFormat("Risposta non inviata - {0}", exc.Message);
-                RetValue = false;
-            }
-
+            RetValue = SendResponse(Message, RetValue);
+#endif
             return RetValue;
         }
+
 
         private bool SubscribePLCTags(IIncomingMessage Message)
         {
@@ -453,67 +476,13 @@ namespace plcserver
 
             foreach (var tag in tagslist)
             {
-                /* verifico esistenza PLC interessato */
-                if (!_PLCs.ContainsKey(tag.PLCName))
-                {
-                    // log
-                    Logger.WarnFormat("PLC [{0}] not connected", tag.PLCName);
-
-                    RetValue = false;
-                }
-                else
-                {
-                    try
-                    {
-                        /* aggiungo tag */
-                        _PLCs[tag.PLCName].AddTag(tag.Name);
-
-                        // gestione subscriptions
-                        if (!_Subs.ContainsKey(Message.SourceApplicationName))
-                        {
-                            _Subs.Add(Message.SourceApplicationName, new HashSet<Subscription>());
-                        }
-
-                        _Subs[Message.SourceApplicationName].Add(new Subscription(tag.PLCName, tag.Name));
-                    }
-                    catch (Exception exc)
-                    {
-                        // log
-                        Logger.WarnFormat("PLC [{0}] error adding tag {1} : {2}", tag.PLCName, tag.Name, exc.Message);
-                        RetValue = false;
-                    }
-                }
+                if (!SubscribePLCTag(Message.SourceApplicationName, tag)) { RetValue = false; }
             }
 
+#if eliminato
             /* invio messaggio di risposta */
-
-            //Create a DotNetMQ Message to respond
-            var ResponseMessage = Message.CreateResponseMessage();
-
-
-            //Create a message
-            var ResponseData = new ResponseData
-            {
-                Response = RetValue
-            };
-
-            //Set message data
-            ResponseMessage.MessageData = GeneralHelper.SerializeObject(ResponseData);
-            ResponseMessage.TransmitRule = MessageTransmitRules.NonPersistent;
-
-            try
-            {
-                //Send message
-                ResponseMessage.Send();
-
-                Logger.InfoFormat("Inviata Risposta a {0}", ResponseMessage.DestinationApplicationName);
-            }
-            catch (Exception exc)
-            {
-                // non sono riuscito a inviare il messaggio
-                Logger.WarnFormat("Risposta non inviata - {0}", exc.Message);
-                RetValue = false;
-            }
+            RetValue = SendResponse(Message, RetValue);
+#endif
             return RetValue;
         }
 
@@ -525,69 +494,17 @@ namespace plcserver
             var msgdata = GeneralHelper.DeserializeObject(Message.MessageData) as PLCTagsData;
             var tagslist = msgdata.Tags;
 
-            Logger.InfoFormat("{1}", Message.SourceApplicationName);
+            Logger.InfoFormat("{0}", Message.SourceApplicationName);
 
             foreach (var tag in tagslist)
             {
-                /* verifico connessione/esistenza PLC interessato */
-                if (!_PLCs.ContainsKey(tag.PLCName))
-                {
-                    // log
-                    Logger.WarnFormat("PLC [{0}] not connected", tag.PLCName);
-
-                    RetValue = false;
-                }
-                else
-                {
-                    try
-                    {
-                        /* rimuovo tag */
-                        _PLCs[tag.PLCName].RemoveTag(tag.Name);
-
-                        // gestione subscriptions
-                        if (_Subs.ContainsKey(Message.SourceApplicationName))
-                        {
-                            _Subs[Message.SourceApplicationName].Remove(new Subscription(tag.PLCName, tag.Name));
-                        }
-                    }
-                    catch (Exception exc)
-                    {
-                        // log
-                        Logger.WarnFormat("PLC [{0}] error removing tag {1} : {2}",tag.PLCName, tag.Name, exc.Message);
-                        RetValue = false;
-                    }
-                }
+                if (!RemovePLCTag(Message.SourceApplicationName, tag)) { RetValue = false; }
             }
 
+#if eliminato
             /* invio messaggio di risposta */
-
-            //Create a DotNetMQ Message to respond
-            var ResponseMessage = Message.CreateResponseMessage();
-
-            //Create a message
-            var ResponseData = new ResponseData
-            {
-                Response = RetValue
-            };
-
-            //Set message data
-            ResponseMessage.MessageData = GeneralHelper.SerializeObject(ResponseData);
-            ResponseMessage.TransmitRule = MessageTransmitRules.NonPersistent;
-
-            try
-            {
-                //Send message
-                ResponseMessage.Send();
-
-                Logger.InfoFormat("Inviata Risposta a {0}", ResponseMessage.DestinationApplicationName);
-            }
-            catch (Exception exc)
-            {
-                // non sono riuscito a inviare il messaggio
-                Logger.WarnFormat("Risposta non inviata - {0}", exc.Message);
-                RetValue = false;
-            }
-
+            RetValue = SendResponse(Message, RetValue);
+#endif
             return RetValue;
         }
 
@@ -611,12 +528,13 @@ namespace plcserver
                 /* costruisco la lista da inviare come risposta */
                 foreach (var sub in _Subs[Message.SourceApplicationName].ToList())
                 {
-                    var tag = new PLCTag() { PLCName = sub.PLCName, Name = sub.TagName };
+                    var tag = new PLCTag() { PLCName = sub.PLCName, Address = sub.TagAddress };
                     tagslist.Add(tag);
                 }
             }
-            /* invio messaggio di risposta */
 
+#if eliminato
+            /* invio messaggio di risposta */
             //Create a DotNetMQ Message to respond
             var ResponseMessage = Message.CreateResponseMessage();
 
@@ -643,7 +561,7 @@ namespace plcserver
                 Logger.WarnFormat("Risposta non inviata - {0}", exc.Message);
                 RetValue = false;
             }
-
+#endif
             return RetValue;
         }
 
@@ -651,47 +569,6 @@ namespace plcserver
         private bool StartCheckPLCTags(IIncomingMessage Message)
         {
             bool RetValue = true;
-
-            // get msg application data
-            var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as MsgData;
-
-            Logger.InfoFormat("{0}", Message.SourceApplicationName);
-
-            // gestione subscriptions
-            if (!_Subs.ContainsKey(Message.SourceApplicationName))
-            {
-                Logger.InfoFormat("{0} has no subscriptions", Message.SourceApplicationName);
-            }
-
-            /* invio messaggio di risposta */
-
-            //Create a DotNetMQ Message to respond
-            var ResponseMessage = Message.CreateResponseMessage();
-
-            //Create a message
-            var ResponseData = new ResponseData
-            {
-                Response = RetValue
-            };
-
-            //Set message data
-            ResponseMessage.MessageData = GeneralHelper.SerializeObject(ResponseData);
-            ResponseMessage.TransmitRule = MessageTransmitRules.NonPersistent;
-
-            try
-            {
-                //Send message
-                ResponseMessage.Send();
-
-                Logger.InfoFormat("Inviata Risposta a {0}", ResponseMessage.DestinationApplicationName);
-            }
-            catch (Exception exc)
-            {
-                // non sono riuscito a inviare il messaggio
-                Logger.WarnFormat("Risposta non inviata - {0}", exc.Message);
-                RetValue = false;
-            }
-
             return RetValue;
         }
 
@@ -699,47 +576,6 @@ namespace plcserver
         private bool StopCheckPLCTags(IIncomingMessage Message)
         {
             bool RetValue = true;
-
-            // get msg application data
-            var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as MsgData;
-
-            Logger.InfoFormat("{1}", Message.SourceApplicationName);
-
-            // gestione subscriptions
-            if (!_Subs.ContainsKey(Message.SourceApplicationName))
-            {
-                Logger.InfoFormat("{0} has no subscriptions", Message.SourceApplicationName);
-            }
-
-            /* invio messaggio di risposta */
-
-            //Create a DotNetMQ Message to respond
-            var ResponseMessage = Message.CreateResponseMessage();
-
-            //Create a message
-            var ResponseData = new ResponseData
-            {
-                Response = RetValue
-            };
-
-            //Set message data
-            ResponseMessage.MessageData = GeneralHelper.SerializeObject(ResponseData);
-            ResponseMessage.TransmitRule = MessageTransmitRules.NonPersistent;
-
-            try
-            {
-                //Send message
-                ResponseMessage.Send();
-
-                Logger.InfoFormat("Inviata Risposta a {0}", ResponseMessage.DestinationApplicationName);
-            }
-            catch (Exception exc)
-            {
-                // non sono riuscito a inviare il messaggio
-                Logger.WarnFormat("Risposta non inviata - {0}", exc.Message);
-                RetValue = false;
-            }
-
             return RetValue;
         }
 
@@ -768,47 +604,22 @@ namespace plcserver
                     try
                     {
                         /* scrivo tag */
-                        var plctag = new S7NetWrapper.Tag(tag.Name, tag.Value);
+                        var plctag = new S7NetWrapper.Tag(tag.Address, tag.Value);
                         _PLCs[tag.PLCName].Write(plctag);
                     }
                     catch (Exception exc)
                     {
                         // log
-                        Logger.WarnFormat("PLC [{0}] error writing tag {1} : {2}", tag.PLCName, tag.Name, exc.Message);
+                        Logger.WarnFormat("PLC [{0}] error writing tag {1} : {2}", tag.PLCName, tag.Address, exc.Message);
                         RetValue = false;
                     }
                 }
             }
 
-            /* invio messaggio di risposta */
-
-            //Create a DotNetMQ Message to respond
-            var ResponseMessage = Message.CreateResponseMessage();
-
-            //Create a message
-            var ResponseData = new ResponseData
-            {
-                Response = RetValue
-            };
-
-            //Set message data
-            ResponseMessage.MessageData = GeneralHelper.SerializeObject(ResponseData);
-            ResponseMessage.TransmitRule = MessageTransmitRules.NonPersistent;
-
-            try
-            {
-                //Send message
-                ResponseMessage.Send();
-
-                Logger.InfoFormat("Inviata Risposta a {0}", ResponseMessage.DestinationApplicationName);
-            }
-            catch (Exception exc)
-            {
-                // non sono riuscito a inviare il messaggio
-                Logger.WarnFormat("Risposta non inviata - {0}", exc.Message);
-                RetValue = false;
-            }
-
+            /* NON invio messaggio di risposta */
+#if false
+            RetValue = SendResponse(Message, RetValue);
+#endif
             return RetValue;
         }
 
@@ -838,7 +649,7 @@ namespace plcserver
                     try
                     {
                         /* leggo tag value */
-                        var plctag = _PLCs[tag.PLCName].Read(new S7NetWrapper.Tag(tag.Name));
+                        var plctag = _PLCs[tag.PLCName].Read(new S7NetWrapper.Tag(tag.Address));
                         if(plctag!=null){
                             tag.Value = plctag.ItemValue;
                         }
@@ -847,14 +658,14 @@ namespace plcserver
                     catch (Exception exc)
                     {
                         // log
-                        Logger.WarnFormat("PLC [{0}] error reading tag {1} : {2}", tag.PLCName, tag.Name, exc.Message);
+                        Logger.WarnFormat("PLC [{0}] error reading tag {1} : {2}", tag.PLCName, tag.Address, exc.Message);
                         RetValue = false;
                     }
                 }
             }
 
+#if eliminato
             /* invio messaggio di risposta */
-
             //Create a DotNetMQ Message to respond
             var ResponseMessage = Message.CreateResponseMessage();
 
@@ -881,19 +692,13 @@ namespace plcserver
                 Logger.WarnFormat("Risposta non inviata - {0}", exc.Message);
                 RetValue = false;
             }
-
+#endif // eliminato
             return RetValue;
         }
 
-        private bool SetPLCTag(IIncomingMessage Message)
+        private bool SetPLCTag(PLCTag tag)
         {
             bool RetValue = true;
-
-            // get msg application data
-            var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as PLCTagData;
-            var tag = MsgData.Tag;
-
-            Logger.InfoFormat("{0}", Message.SourceApplicationName);
 
             /* verifico connessione/esistenza PLC interessato */
             if (!_PLCs.ContainsKey(tag.PLCName))
@@ -908,50 +713,20 @@ namespace plcserver
                 try
                 {
                     /* scrivo tag */
-                    var plctag = new S7NetWrapper.Tag(tag.Name, tag.Value);
+                    var plctag = new S7NetWrapper.Tag(tag.Address, tag.Value);
                     _PLCs[tag.PLCName].Write(plctag);
                 }
                 catch (Exception exc)
                 {
                     // log
-                    Logger.WarnFormat("PLC [{0}] error writing tag {1} : {2}", tag.PLCName, tag.Name, exc.Message);
+                    Logger.WarnFormat("PLC [{0}] error writing tag {1} : {2}", tag.PLCName, tag.Address, exc.Message);
                     RetValue = false;
                 }
             }
-
-            /* invio messaggio di risposta */
-
-            //Create a DotNetMQ Message to respond
-            var ResponseMessage = Message.CreateResponseMessage();
-
-            //Create a message
-            var ResponseData = new ResponseData
-            {
-                Response = RetValue
-            };
-
-            //Set message data
-            ResponseMessage.MessageData = GeneralHelper.SerializeObject(ResponseData);
-            ResponseMessage.TransmitRule = MessageTransmitRules.NonPersistent;
-
-            try
-            {
-                //Send message
-                ResponseMessage.Send();
-
-                Logger.InfoFormat("Inviata Risposta a {0}", ResponseMessage.DestinationApplicationName);
-            }
-            catch (Exception exc)
-            {
-                // non sono riuscito a inviare il messaggio
-                Logger.WarnFormat("Risposta non inviata - {0}", exc.Message);
-                RetValue = false;
-            }
-
             return RetValue;
         }
 
-        private bool GetPLCTag(IIncomingMessage Message)
+        private bool SetPLCTag(IIncomingMessage Message)
         {
             bool RetValue = true;
 
@@ -959,7 +734,20 @@ namespace plcserver
             var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as PLCTagData;
             var tag = MsgData.Tag;
 
-            Logger.InfoFormat("{0}/{1} da {2}", tag.PLCName, tag.Name, Message.SourceApplicationName);
+            Logger.InfoFormat("{0} {1}/{2} : {3}", Message.SourceApplicationName,tag.PLCName,tag.Address,tag.Value);
+
+            RetValue=SetPLCTag(tag);
+
+#if false
+            /* NON invio messaggio di risposta */
+            RetValue = SendResponse(Message, RetValue);
+#endif
+            return RetValue;
+        }
+
+        private bool GetPLCTag(ref PLCTag tag)
+        {
+            bool RetValue = true;
 
             /* verifico connessione/esistenza PLC interessato */
             if (!_PLCs.ContainsKey(tag.PLCName))
@@ -974,7 +762,7 @@ namespace plcserver
                 try
                 {
                     /* leggo tag value*/
-                    var plctag = _PLCs[tag.PLCName].Read(new S7NetWrapper.Tag(tag.Name));
+                    var plctag = _PLCs[tag.PLCName].Read(new S7NetWrapper.Tag(tag.Address));
                     if (plctag != null)
                     {
                         tag.Value = plctag.ItemValue;
@@ -983,10 +771,28 @@ namespace plcserver
                 catch (Exception exc)
                 {
                     // log
-                    Logger.WarnFormat("PLC [{0}] error reading tag {1} : {2}", tag.PLCName, tag.Name, exc.Message);
+                    Logger.WarnFormat("PLC [{0}] error reading tag {1} : {2}", tag.PLCName, tag.Address, exc.Message);
                     RetValue = false;
                 }
             }
+
+            return RetValue;
+        }
+
+
+        private bool GetPLCTag(IIncomingMessage Message)
+        {
+            bool RetValue = true;
+
+            // get msg application data
+            var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as PLCTagData;
+            var tag = MsgData.Tag;
+
+            Logger.InfoFormat("{0}/{1} da {2}", tag.PLCName, tag.Address, Message.SourceApplicationName);
+
+            RetValue = GetPLCTag(ref tag);
+
+#if eliminato
 
             /* invio messaggio di risposta */
 
@@ -1016,7 +822,7 @@ namespace plcserver
                 Logger.WarnFormat("Risposta non inviata - {0}", exc.Message);
                 RetValue = false;
             }
-
+#endif
             return RetValue;
         }
 
@@ -1056,6 +862,8 @@ namespace plcserver
                 }
             }
 
+#if eliminato
+
             //Create a DotNetMQ Message to send 
             var ResponseMessage = Message.CreateResponseMessage();
 
@@ -1084,6 +892,7 @@ namespace plcserver
                 ConnectionStatus = PLCConnectionStatus.NotConnected;
                 RetValue = false;
             }
+#endif
             return RetValue;
         }
 
@@ -1102,7 +911,7 @@ namespace plcserver
                 {
                     // trovato il subscriber, invio messaggio di tag changed
                     tag.PLCName = e.PLCName;
-                    tag.Name = e.Tag.ItemName;
+                    tag.Address = e.Tag.ItemName;
                     tag.Value = e.Tag.ItemValue;
 
                     //Create a DotNetMQ Message to send 
@@ -1126,7 +935,7 @@ namespace plcserver
                     {
                         //Send message
                         message.Send();
-                        Logger.InfoFormat("{1}/{2}-{3} : Inviata Risposta a {0}", message.DestinationApplicationName, tag.PLCName, tag.Name, tag.Value.ToString());
+                        Logger.InfoFormat("{1}/{2}-{3} : Inviata Risposta a {0}", message.DestinationApplicationName, tag.PLCName, tag.Address, tag.Value.ToString());
                     }
                     catch (Exception exc)
                     {
@@ -1135,6 +944,38 @@ namespace plcserver
                     }
                 }
             }
+        }
+
+        // invia risposta generica (bool)
+        private bool SendResponse(IIncomingMessage Message, bool bOK)
+        {
+
+            //Create a DotNetMQ Message to respond
+            var ResponseMessage = Message.CreateResponseMessage();
+            var ResponseData = new ResponseData
+            {
+                Response = bOK
+            };
+
+            //Set message data
+            ResponseMessage.MessageData = GeneralHelper.SerializeObject(ResponseData);
+            ResponseMessage.TransmitRule = MessageTransmitRules.NonPersistent;
+
+            try
+            {
+                //Send message
+                ResponseMessage.Send();
+
+                Logger.InfoFormat("Inviata Risposta a {0}", ResponseMessage.DestinationApplicationName);
+            }
+            catch (Exception exc)
+            {
+                // non sono riuscito a inviare il messaggio
+                Logger.WarnFormat("Risposta non inviata - {0}", exc.Message);
+
+                bOK = false;
+            }
+            return bOK;
         }
         #endregion Private Methods
     }

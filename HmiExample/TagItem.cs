@@ -41,6 +41,20 @@ namespace HmiExample
             }
         }
 
+        private string address;
+        public string Address
+        {
+            get { return this.address; }
+            set
+            {
+                if (this.address != value)
+                {
+                    this.address = value;
+                    this.NotifyPropertyChanged("Address");
+                }
+            }
+        }
+
         private string type;
         public string Type
         {
@@ -79,7 +93,7 @@ namespace HmiExample
 
         public override string ToString()
         {
-            return string.Format("{0}/{1}", plcName, name);
+            return string.Format("{0}/{1}", plcName, address);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -104,11 +118,11 @@ namespace HmiExample
             }
 
             // Return true if either fields match:
-            return ((PLCName == tag.PLCName && Name == tag.Name));
+            return ((PLCName == tag.PLCName && Address == tag.Address));
         }
         public override int GetHashCode()
         {
-            return (this.PLCName+this.Name).GetHashCode();
+            return (this.PLCName+this.Address).GetHashCode();
         }
 
         public static bool operator == (TagItem tag1, TagItem tag2)

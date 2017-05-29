@@ -10,12 +10,12 @@ namespace plcserver
     class Subscription : IComparable,IComparable<Subscription>
     {
         public string PLCName { get; private set; }
-        public string TagName { get; private set; }
+        public string TagAddress { get; private set; }
 
-        public Subscription(string plcName, string tagName)
+        public Subscription(string plcName, string tagAddress)
         {
             PLCName = plcName;
-            TagName = tagName;
+            TagAddress = tagAddress;
         }
 
         public override bool Equals(object obj)
@@ -25,12 +25,17 @@ namespace plcserver
 
             if(sub==null) return false;
 
-            return (PLCName == sub.PLCName && TagName == sub.TagName);
+            return (PLCName == sub.PLCName && TagAddress == sub.TagAddress);
         }
 
         public override int GetHashCode()
         {
-            return (PLCName+TagName).GetHashCode();
+            return (PLCName+TagAddress).GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            return PLCName + "/" + TagAddress;
         }
 
         #region IComparable Members
@@ -47,7 +52,7 @@ namespace plcserver
         {
             var cmpPLCName = PLCName.CompareTo(sub.PLCName);
             if (cmpPLCName == 0) 
-                return TagName.CompareTo(sub.TagName);
+                return TagAddress.CompareTo(sub.TagAddress);
             return cmpPLCName;            
         }
 

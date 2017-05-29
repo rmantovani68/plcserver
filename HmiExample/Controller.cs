@@ -134,7 +134,7 @@ namespace HmiExample
             // se già presente non lo agiungo
             if (model.ListTagItems.Contains(tag))
             {
-                Logger.InfoFormat("tag {0}/{1} già presente", tag.PLCName, tag.Name);
+                Logger.InfoFormat("tag {0}/{1} già presente", tag.PLCName, tag.Address);
                 return false;
             }
 
@@ -149,7 +149,7 @@ namespace HmiExample
             var MsgData = new PLCTagData
             {
                 MsgCode = MsgCodes.SubscribePLCTag,
-                Tag = new PLCTag() { PLCName = tag.PLCName, Name = tag.Name}
+                Tag = new PLCTag() { PLCName = tag.PLCName, Address = tag.Address}
             };
 
             //Set message data
@@ -171,11 +171,11 @@ namespace HmiExample
                 RetValue = ResponseData.Response;
                 if (RetValue == false)
                 {
-                    Logger.InfoFormat("Errore in aggiunta tag {0}", tag.Name);
+                    Logger.InfoFormat("Errore in aggiunta tag {0}", tag.Address);
                 }
                 else
                 {
-                    Logger.InfoFormat("tag {0} aggiunto", tag.Name);
+                    Logger.InfoFormat("tag {0} aggiunto", tag.Address);
                 }
 
                 //Acknowledge received message
@@ -191,7 +191,7 @@ namespace HmiExample
             }
             if(RetValue)
             {
-                Logger.InfoFormat("Aggiunto {0}/{1}:{2}",tag.PLCName,tag.Name,tag.Type);
+                Logger.InfoFormat("Aggiunto {0}/{1}:{2}",tag.PLCName,tag.Address,tag.Type);
 
                 /* verifica il nome del plc tag */
                 model.ListTagItems.Add(tag);
@@ -214,7 +214,7 @@ namespace HmiExample
             var MsgData = new PLCTagData
             {
                 MsgCode = MsgCodes.RemovePLCTag,
-                Tag = new PLCTag() { PLCName = tag.PLCName, Name = tag.Name }
+                Tag = new PLCTag() { PLCName = tag.PLCName, Address = tag.Address }
             };
 
             //Set message data
@@ -310,7 +310,7 @@ namespace HmiExample
                 string[] var2 = var1[1].Split(':');
                 if (var2.Count() == 2)
                 {
-                    var tag = new TagItem() { PLCName = var1[0], Name = var2[0], Type = var2[1] };
+                    var tag = new TagItem() { PLCName = var1[0], Address = var2[0], Type = var2[1] };
                     // controlla che plcname sia un plc connesso
                     if (!PLCNameExists(tag.PLCName))
                     {
@@ -413,9 +413,9 @@ namespace HmiExample
             // get msg application data
             var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as PLCTagData;
 
-            Logger.InfoFormat("Ricevuto Messaggio {1}/{2}:{3} da {0}", Message.SourceApplicationName, MsgData.Tag.PLCName, MsgData.Tag.Name, MsgData.Tag.Value);
+            Logger.InfoFormat("Ricevuto Messaggio {1}/{2}:{3} da {0}", Message.SourceApplicationName, MsgData.Tag.PLCName, MsgData.Tag.Address, MsgData.Tag.Value);
 
-            var tag = model.ListTagItems.FirstOrDefault(item => item.Name == MsgData.Tag.Name);
+            var tag = model.ListTagItems.FirstOrDefault(item => item.Address == MsgData.Tag.Address);
             if (tag != null)
             {
                 // funzionano entrambe, la Invoke esegue in modo bloccante, la BeginInvoke esegue in parallelo
@@ -433,7 +433,7 @@ namespace HmiExample
             }
             else
             {
-                Logger.InfoFormat("Tag {0}/{1} non trovato", tag.PLCName, tag.Name);
+                Logger.InfoFormat("Tag {0}/{1} non trovato", tag.PLCName, tag.Address);
                 RetValue = false;
             }
 
