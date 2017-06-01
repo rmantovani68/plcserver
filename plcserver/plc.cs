@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Timers;
 using S7.Net;
 using S7NetWrapper;
 #endregion Using
@@ -301,7 +302,7 @@ namespace plcserver
                 var new_TagsList = plcDriver.ReadItems(old_TagsList);
 
                 /*
-                * ora occorre modificare i cambiamenti ai sottoscriventi
+                * ora occorre notificare i cambiamenti ai sottoscriventi
                 */
                 foreach (var Item in new_TagsList)
                 {
@@ -312,7 +313,7 @@ namespace plcserver
                             /* valore sottoscritto cambiato */
                             if (TagChangedValue != null)
                             {
-                                //Raise MessageReceived event
+                                //Raise event
                                 Tag _Tag = new Tag(Item.ItemName);
                                 _Tag.ItemValue = Item.ItemValue;
 

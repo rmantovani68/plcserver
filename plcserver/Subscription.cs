@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace plcserver
 {
 
-    class Subscription : IComparable,IComparable<Subscription>
+    class Subscription : IComparable, IComparable<Subscription>
     {
         public string PLCName { get; private set; }
         public string TagAddress { get; private set; }
@@ -18,15 +18,18 @@ namespace plcserver
             TagAddress = tagAddress;
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(Object obj)
         {
-            // throws exception if type is wrong
-            var sub = obj as Subscription;
+            return Equals(obj as Subscription);
+        }
 
-            if(sub==null) return false;
+        public bool Equals(Subscription sub)
+        {
+            if (sub == null) return false;
 
             return (PLCName == sub.PLCName && TagAddress == sub.TagAddress);
         }
+
 
         public override int GetHashCode()
         {
@@ -55,9 +58,6 @@ namespace plcserver
                 return TagAddress.CompareTo(sub.TagAddress);
             return cmpPLCName;            
         }
-
         #endregion
-
     }
-
 }

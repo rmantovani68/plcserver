@@ -136,6 +136,7 @@ namespace HmiExample
 
         public bool Connection(string sender, string destination)
         {
+            bool RetValue = true;
             //Create a DotNetMQ Message to send 
             var message = MDSClientInstance.CreateMessage();
 
@@ -145,7 +146,6 @@ namespace HmiExample
             //Create a message
             var MsgData = new PLCConnectionData
             {
-
                 MsgCode = MsgCodes.ConnectPLC,
                 PLCName = this.Name,
                 IpAddress = this.IPAddress,
@@ -162,30 +162,17 @@ namespace HmiExample
 
             try
             {
-
                 //Send message
-                var responseMessage = message.SendAndGetResponse();
+                message.Send();
                 Logger.InfoFormat("Inviato Messaggio a {0}", message.DestinationApplicationName);
-
-
-                //Get connect result
-                var ResponseData = MDS.GeneralHelper.DeserializeObject(responseMessage.MessageData) as PLCStatusData;
-
-                this.ConnectionStatus = ResponseData.Status;
-
-                Logger.InfoFormat("Ricevuto risposta [{0}]", this.ConnectionStatus.ToString());
-
-                //Acknowledge received message
-                responseMessage.Acknowledge();
-
             }
             catch (Exception exc)
             {
                 // non sono riuscito a inviare il messaggio
                 Logger.WarnFormat("Messaggio non inviato : {0}",exc.Message);
-                this.ConnectionStatus = PLCConnectionStatus.NotConnected;
+                RetValue = false;
             }
-            return this.ConnectionStatus != PLCConnectionStatus.NotConnected;
+            return RetValue;
         }
 
         public bool Disconnection(string sender, string destination)
@@ -214,26 +201,15 @@ namespace HmiExample
             try
             {
                 //Send message
-                var responseMessage = message.SendAndGetResponse();
+                message.Send();
 
                 Logger.InfoFormat("Inviato Messaggio a {0}", message.DestinationApplicationName);
-
-                //Get connect result
-                var ResponseData = MDS.GeneralHelper.DeserializeObject(responseMessage.MessageData) as PLCStatusData;
-                
-                this.ConnectionStatus = ResponseData.Status;
-
-                Logger.InfoFormat("Ricevuto risposta [{0}]", this.ConnectionStatus.ToString());
-
-                //Acknowledge received message
-                responseMessage.Acknowledge();
-
             }
             catch (Exception exc)
             {
                 // non sono riuscito a inviare il messaggio
                 Logger.WarnFormat("Disconnection() : Messaggio non inviato : {0}",exc.Message);
-                this.ConnectionStatus = PLCConnectionStatus.NotConnected;
+                RetVal = false;
             }
             return RetVal;
         }
@@ -243,14 +219,8 @@ namespace HmiExample
             return string.Format("{0}:{1}", Name, IPAddress);
         }
 
-        public override bool Equals(System.Object obj)
+        public override bool Equals(Object obj)
         {
-            // If parameter is null return false.
-            if (obj == null)
-            {
-                return false;
-            }
-
             return Equals(obj as PLCItem);
         }
 
@@ -268,7 +238,7 @@ namespace HmiExample
 
         public override int GetHashCode()
         {
-            return (this.Name + this.IPAddress).GetHashCode();
+            return this.ToString().GetHashCode();
         }
 
         public static bool operator == (PLCItem plc1, PLCItem plc2)

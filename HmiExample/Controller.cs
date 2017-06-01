@@ -161,25 +161,10 @@ namespace HmiExample
             try
             {
                 //Send message
-                var responseMessage = message.SendAndGetResponse();
+                message.Send();
 
                 Logger.InfoFormat("Inviato Messaggio a {0}", message.DestinationApplicationName);
 
-                //Get connect result
-                var ResponseData = GeneralHelper.DeserializeObject(responseMessage.MessageData) as ResponseData;
-
-                RetValue = ResponseData.Response;
-                if (RetValue == false)
-                {
-                    Logger.InfoFormat("Errore in aggiunta tag {0}", tag.Address);
-                }
-                else
-                {
-                    Logger.InfoFormat("tag {0} aggiunto", tag.Address);
-                }
-
-                //Acknowledge received message
-                responseMessage.Acknowledge();
 
 
             }
@@ -226,18 +211,9 @@ namespace HmiExample
             try
             {
                 //Send message
-                var responseMessage = message.SendAndGetResponse();
+                message.Send();
 
                 Logger.InfoFormat("Inviato Messaggio a {0}", message.DestinationApplicationName);
-
-                //Get connect result
-                var ResponseData = GeneralHelper.DeserializeObject(responseMessage.MessageData) as ResponseData;
-
-                RetValue = ResponseData.Response;
-
-                //Acknowledge received message
-                responseMessage.Acknowledge();
-
             }
             catch
             {
@@ -385,6 +361,7 @@ namespace HmiExample
                 var Message = e.Message;
                 // Get message data
                 var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as MsgData;
+
 
                 switch (MsgData.MsgCode)
                 {
