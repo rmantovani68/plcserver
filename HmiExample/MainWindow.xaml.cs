@@ -102,6 +102,7 @@ namespace HmiExample
                 {
                     Controller.Instance.PLCConnect(plc);
 
+                    //
                     SetPLCButtonsState(listviewPLCs.SelectedItem as PLCItem);
                 }
                 catch (Exception exc)
@@ -120,6 +121,7 @@ namespace HmiExample
                 {
                     Controller.Instance.PLCDisconnect(plc);
 
+                    //
                     SetPLCButtonsState(listviewPLCs.SelectedItem as PLCItem);
                 }
                 catch (Exception exc)
@@ -174,25 +176,14 @@ namespace HmiExample
 
                 Controller.Instance.PLCRemoveTag(tag);
             }
-            /*
-            if (listviewVars.SelectedItem != null)
-            {
-                var tag = listviewVars.SelectedItem as TagItem;
-
-                var rnd = new Random();
-
-                tag.Value = rnd.Next(100).ToString();
-                tag.Type = rnd.Next(100).ToString();
-                tag.Name = rnd.Next(100).ToString();
-            }
-            */
         }
 
         // Method to handle the Window.Closing event.
         private void Window_Closing(object sender, CancelEventArgs e)
         {
-            // disconnettere tutti i plc
+            // disconnettere tutti i plc e disconnettere la gestione msg
             Controller.Instance.Close();
+
         }
 
         private void listviewPLCs_SelectionChanged(object sender, SelectionChangedEventArgs e)

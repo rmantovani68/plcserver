@@ -6,13 +6,13 @@
         x:Name="window" 
         x:Class="HmiExample.MainWindow"
         Title="PLCServer example" 
-        Height="577" 
-        Width="625" 
+        Height="382" 
+        Width="562" 
         Closing="Window_Closing"
     >
     <Window.Resources>
     </Window.Resources>
-    <Grid Background="#FFE2E2E2" Height="545">
+    <Grid Background="#FFE2E2E2">
         <Grid.RowDefinitions>
             <RowDefinition />
             <RowDefinition Height="auto"/>
@@ -41,24 +41,6 @@
         <!-- Dint (32 bit signed) -->
 
         <!-- DWord (16 bit unsigned) -->
-        <Border BorderBrush="Black" BorderThickness="0" Margin="0" Grid.Row="1" Height="150">
-            <chartingToolkit:Chart Title="" Padding="10">
-                <chartingToolkit:Chart.Axes>
-                    <chartingToolkit:CategoryAxis SeriesHost="{x:Null}"/>
-                </chartingToolkit:Chart.Axes>
-                <chartingToolkit:LineSeries DependentValuePath="Y" IndependentValuePath="X" TransitionDuration="0" ItemsSource="{Binding LP, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:MainWindow}}}">
-                    <chartingToolkit:LineSeries.DependentRangeAxis>
-                        <chartingToolkit:LinearAxis x:Name="laAxis" Minimum="{Binding MinimumRange, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:MainWindow}}}" Maximum="{Binding MaximumRange, Mode=TwoWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:MainWindow}}, UpdateSourceTrigger=PropertyChanged}" Orientation="Y"/>
-                    </chartingToolkit:LineSeries.DependentRangeAxis>
-                </chartingToolkit:LineSeries>
-            </chartingToolkit:Chart>
-        </Border>
-        <Slider x:Name="sliderLoopTime" HorizontalAlignment="Left" Margin="513,265,0,0" VerticalAlignment="Top" Width="87" Maximum="1000" SmallChange="1" Value="{Binding LoopTime, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:MainWindow}}}" TickPlacement="BottomRight" Interval="100" UseLayoutRounding="False"/>
-        <Slider x:Name="sliderLoopTimeDisplayRange" HorizontalAlignment="Left" Margin="513,344,0,0" VerticalAlignment="Top" Width="87" Maximum="1000" SmallChange="1" Value="{Binding LoopTimeDisplayRange, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:MainWindow}}}" TickPlacement="BottomRight" Interval="100"/>
-        <Slider x:Name="sliderPlcLoopTime" HorizontalAlignment="Left" Margin="513,304,0,0" VerticalAlignment="Top" Width="87" Maximum="1000" SmallChange="1" TickPlacement="BottomRight" Interval="100" Value="{Binding PlcLoopTime, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:MainWindow}}}"/>
-        <Label Content="LoopTime" HorizontalAlignment="Left" Margin="417,263,0,0" VerticalAlignment="Top" />
-        <Label Content="PLC LoopTime" HorizontalAlignment="Left" Margin="417,302,0,0" VerticalAlignment="Top" />
-        <Label Content="Display Range" HorizontalAlignment="Left" Margin="417,342,0,0" VerticalAlignment="Top" />
         <Button x:Name="btnAddTag" Content="Add" HorizontalAlignment="Left" Height="25" Margin="411,150,0,0" VerticalAlignment="Top" Width="91" Click="btnAddTag_Click"/>
         <Button x:Name="btnDeleteTag" Content="Delete" HorizontalAlignment="Left" Height="25" Margin="411,180,0,0" VerticalAlignment="Top" Width="91" Click="btnDeleteTag_Click" IsEnabled="False"/>
 

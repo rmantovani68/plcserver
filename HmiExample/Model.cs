@@ -102,6 +102,8 @@ namespace HmiExample
         // timer 
         DispatcherTimer timer = new DispatcherTimer();
 
+        public bool ConnectionState = false;
+
         #region Constructor
         public Model()
         {

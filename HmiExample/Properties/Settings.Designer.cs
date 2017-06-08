@@ -25,7 +25,7 @@ namespace HmiExample.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("127.0.0.1")]
+        [global::System.Configuration.DefaultSettingValueAttribute("213.131.0.161")]
         public string IpAddress {
             get {
                 return ((string)(this["IpAddress"]));

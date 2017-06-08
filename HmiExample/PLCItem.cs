@@ -11,6 +11,8 @@ using log4net;
 using MDS.Client;
 using OMS.Core.Communication;
 using MDS.Communication.Messages;
+using System.Windows;
+using System.Windows.Threading;
 #endregion
 
 namespace HmiExample
@@ -129,7 +131,14 @@ namespace HmiExample
         public void NotifyPropertyChanged(string propName)
         {
             if (this.PropertyChanged != null)
-                this.PropertyChanged(this, new PropertyChangedEventArgs(propName));
+            {
+                // reentrant... approfondire
+                Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+                {
+                    this.PropertyChanged(this, new PropertyChangedEventArgs(propName));
+                }));
+            }
+
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

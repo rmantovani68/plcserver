@@ -137,11 +137,15 @@ namespace plcserver
         {
             // Get message 
             var Message = e.Message;
+            
+            // Acknowledge that message is properly handled and processed. So, it will be deleted from queue.
+            e.Message.Acknowledge();
+
+            // Get message data
+            var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as MsgData;
 
             try
             {
-                // Get message data
-                var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as MsgData;
 
                 switch (MsgData.MsgCode)
                 {
@@ -167,8 +171,6 @@ namespace plcserver
             {
                 Logger.Warn(ex.Message, ex);
             }
-            // Acknowledge that message is properly handled and processed. So, it will be deleted from queue.
-            e.Message.Acknowledge();
         }
 
         /// <summary>

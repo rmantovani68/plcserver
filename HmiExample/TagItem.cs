@@ -5,6 +5,8 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Threading;
 
 #endregion
 
@@ -87,8 +89,14 @@ namespace HmiExample
 
         void NotifyPropertyChanged(string propName)
         {
-            if (this.PropertyChanged != null)
-                this.PropertyChanged(this, new PropertyChangedEventArgs(propName));
+            if (this.PropertyChanged != null) 
+            {
+                // reentrant... approfondire
+                Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+                {
+                    this.PropertyChanged(this, new PropertyChangedEventArgs(propName));
+                }));
+            }
         }
 
         public override string ToString()

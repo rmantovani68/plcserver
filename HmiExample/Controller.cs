@@ -30,7 +30,7 @@ namespace HmiExample
         {
             get
             {
-                if(_instance==null)
+                if (_instance == null)
                 {
                     _instance = new Controller();
                 }
@@ -43,16 +43,16 @@ namespace HmiExample
 
         protected static readonly ILog Logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        public MDSClient mdsClient {get; private set;}
-        
-        public string ApplicationName {get; private set;}
-        
-        public string PLCServerApplicationName {get; private set;}
-        
+        public MDSClient mdsClient { get; private set; }
+
+        public string ApplicationName { get; private set; }
+
+        public string PLCServerApplicationName { get; private set; }
+
         public Model model { get; private set; }
 
         #endregion Public Properties
-        
+
         #region Private Properties
         private DispatcherTimer timer { get; set; }
 
@@ -64,10 +64,10 @@ namespace HmiExample
         private Controller()
         {
             // Name of this application: HMIClient
-            ApplicationName = "HMIClient";
+            ApplicationName = "Interface";
             // Name of the plc server application: PLCServer
             PLCServerApplicationName = "PLCServer";
-            
+
             model = new Model();
 
             timer = new DispatcherTimer();
@@ -85,6 +85,9 @@ namespace HmiExample
                 Logger.Warn(ex.Message, ex);
             }
 
+            // connetto a plcserver
+            PLCServerConnect();
+
             // Register to MessageReceived event to get messages.
             mdsClient.MessageReceived += hmi_MessageReceived;
 
@@ -95,8 +98,104 @@ namespace HmiExample
         }
         #endregion
 
-        
+
         #region Public Methods
+
+        /// <summary>
+        /// Connette a plcserver
+        /// </summary>
+        /// <returns></returns>
+        private bool PLCServerConnect()
+        {
+            bool RetValue = true;
+
+            //Create a DotNetMQ Message to send 
+            var message = mdsClient.CreateMessage();
+
+            //Set destination application name
+            message.DestinationApplicationName = PLCServerApplicationName;
+
+            //Create a message
+            var MsgData = new MsgData
+            {
+                MsgCode = MsgCodes.ConnectSubscriber,
+            };
+
+            //Set message data
+            message.MessageData = GeneralHelper.SerializeObject(MsgData);
+
+            // message.MessageData = Encoding.UTF8.GetBytes(messageText);
+            message.TransmitRule = MessageTransmitRules.NonPersistent;
+
+            try
+            {
+                //Send message
+                message.Send();
+            }
+            catch
+            {
+                // non sono riuscito a inviare il messaggio
+                Logger.InfoFormat("Messaggio non inviato");
+                RetValue = false;
+            }
+
+            if (RetValue)
+            {
+                Logger.InfoFormat("Connesso");
+            }
+
+            return RetValue;
+        }
+
+        /// <summary>
+        /// Disconnette da plcserver
+        /// </summary>
+        /// <returns></returns>
+        private bool PLCServerDisconnect()
+        {
+            bool RetValue = true;
+
+            //Create a DotNetMQ Message to send 
+            var message = mdsClient.CreateMessage();
+
+            //Set destination application name
+            message.DestinationApplicationName = PLCServerApplicationName;
+
+            //Create a message
+            var MsgData = new MsgData
+            {
+                MsgCode = MsgCodes.DisconnectSubscriber,
+            };
+
+            //Set message data
+            message.MessageData = GeneralHelper.SerializeObject(MsgData);
+
+            // message.MessageData = Encoding.UTF8.GetBytes(messageText);
+            message.TransmitRule = MessageTransmitRules.NonPersistent;
+
+            try
+            {
+                //Send message
+                message.Send();
+            }
+            catch
+            {
+                // non sono riuscito a inviare il messaggio
+                Logger.InfoFormat("Messaggio non inviato");
+                RetValue = false;
+            }
+
+            if (RetValue)
+            {
+                Logger.InfoFormat("Disconnesso");
+            }
+
+            return RetValue;
+        }
+
+
+
+
         public void PLCAdd(string plcName, string ipAddress)
         {
             var plc = new PLCItem(plcName, ipAddress, mdsClient);
@@ -149,7 +248,7 @@ namespace HmiExample
             var MsgData = new PLCTagData
             {
                 MsgCode = MsgCodes.SubscribePLCTag,
-                Tag = new PLCTag() { PLCName = tag.PLCName, Address = tag.Address}
+                Tag = new PLCTag() { PLCName = tag.PLCName, Address = tag.Address }
             };
 
             //Set message data
@@ -165,21 +264,12 @@ namespace HmiExample
 
                 Logger.InfoFormat("Inviato Messaggio a {0}", message.DestinationApplicationName);
 
-
-
             }
             catch
             {
                 // non sono riuscito a inviare il messaggio
                 Logger.InfoFormat("Messaggio non inviato");
                 RetValue = false;
-            }
-            if(RetValue)
-            {
-                Logger.InfoFormat("Aggiunto {0}/{1}:{2}",tag.PLCName,tag.Address,tag.Type);
-
-                /* verifica il nome del plc tag */
-                model.ListTagItems.Add(tag);
             }
 
             return RetValue;
@@ -238,8 +328,21 @@ namespace HmiExample
                     plc.Disconnection(ApplicationName, PLCServerApplicationName);
                 }
             }
+            // disconnetto da plcserver
+            PLCServerDisconnect();
 
-            mdsClient.Disconnect();
+            // prima di chiudere con mds devo pulire la coda messaggi...
+            if (model.ConnectionState)
+            {
+                mdsClient.Disconnect();
+            }
+            // aspetto che venga elaborato il messaggio di risopsta alla disconnection
+            while (Controller.Instance.model.ConnectionState == true)
+            {
+                System.Threading.Thread.Sleep(50);
+            }
+
+            Logger.InfoFormat("Stopped");
         }
 
         // verifica presenza di plcname nelle connessioni plc presenti 
@@ -317,7 +420,7 @@ namespace HmiExample
         {
             return Settings.Default.IpAddress;
         }
-        
+
         // reperisce il default plc name dai settings
         public string GetDefaultPLCName()
         {
@@ -330,22 +433,6 @@ namespace HmiExample
 
         private void timer_Tick(object sender, EventArgs e)
         {
-            // statusbar
-
-            // disaccoppiare e gestire multi plc
-            /*
-            lblReadTime.Text = Plc.Instance.CycleReadTime.TotalMilliseconds.ToString(CultureInfo.InvariantCulture);
-
-            LSX++;
-            if (LSX >= LoopTimeDisplayRange)
-            {
-                while(LP.Count>LoopTimeDisplayRange)
-                    LP.RemoveAt(0);
-            }
-
-            
-            LP.Add(new Point(LSX, Plc.Instance.CycleReadTime.TotalMilliseconds));
-            */
         }
 
         /// <summary>
@@ -359,18 +446,33 @@ namespace HmiExample
             {
                 // Get message 
                 var Message = e.Message;
+
+
+                // Acknowledge that message is properly handled and processed. So, it will be deleted from queue.
+                e.Message.Acknowledge();
+
                 // Get message data
                 var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as MsgData;
+
+                Logger.InfoFormat("Ricevuto Messaggio {0}", MsgData.MsgCode);
 
 
                 switch (MsgData.MsgCode)
                 {
-                    case MsgCodes.PLCTagsChanged:
-                        /* gestione da fare */
-                        break;
-                    case MsgCodes.PLCTagChanged:
-                        PLCTagChanged(Message);
-                        break;
+                    case MsgCodes.PLCTagsChanged:          /* gestione da fare */            break;
+                    case MsgCodes.PLCTagChanged:           PLCTagChanged(Message);           break;
+                    case MsgCodes.PLCStatus:               PLCStatus(Message);               break;
+
+                    case MsgCodes.ResultSubscribePLCTag:   ResultSubscribePLCTag(Message);   break;
+                    case MsgCodes.ResultSubscribePLCTags:           break;
+                    case MsgCodes.ResultSetPLCTag:                  break;
+                    case MsgCodes.ResultSetPLCTags:                 break;
+                    case MsgCodes.ResultConnectSubscriber:    ResultConnectSubscriber(Message);    break;
+                    case MsgCodes.ResultDisconnectSubscriber: ResultDisconnectSubscriber(Message); break;
+                    case MsgCodes.ResultConnectPLC:           ResultConnectPLC(Message);           break;
+                    case MsgCodes.ResultDisconnectPLC:        ResultDisconnectPLC(Message);        break;
+
+
 
                 }
             }
@@ -379,9 +481,178 @@ namespace HmiExample
                 Logger.Warn(ex.Message, ex);
             }
 
-            // Acknowledge that message is properly handled and processed. So, it will be deleted from queue.
-            e.Message.Acknowledge();
         }
+
+        private bool RequestPLCStatus(string plcName)
+        {
+            bool RetValue = true;
+
+            //Create a DotNetMQ Message to send 
+            var message = mdsClient.CreateMessage();
+
+            //Set destination application name
+            message.DestinationApplicationName = PLCServerApplicationName;
+
+            //Create a message
+            var MsgData = new PLCData
+            {
+                MsgCode = MsgCodes.GetPLCStatus,
+                PLCName = plcName
+            };
+
+            //Set message data
+            message.MessageData = GeneralHelper.SerializeObject(MsgData);
+
+            // message.MessageData = Encoding.UTF8.GetBytes(messageText);
+            message.TransmitRule = MessageTransmitRules.NonPersistent;
+
+            try
+            {
+                //Send message
+                message.Send();
+            }
+            catch
+            {
+                // non sono riuscito a inviare il messaggio
+                Logger.InfoFormat("Messaggio non inviato");
+                RetValue = false;
+            }
+
+            return RetValue;
+        }
+
+
+        private bool PLCStatus(IIncomingMessage Message)
+        {
+            bool RetValue = true;
+
+            // get msg application data
+            var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as PLCStatusData;
+
+            Logger.InfoFormat("Ricevuto Messaggio {1}:{2} da {0}", Message.SourceApplicationName, MsgData.PLCName, MsgData.Status, MsgData.validation);
+
+            RetValue = MsgData.validation;
+
+            if (MsgData.validation)
+            {
+                var plc = model.ListPLCItems.FirstOrDefault(item => item.Name == MsgData.PLCName);
+                if (plc != null)
+                {
+                    plc.ConnectionStatus = MsgData.Status;
+                }
+                else
+                {
+                    RetValue = false;
+                }
+            }
+
+            return RetValue;
+        }
+
+        private bool ResultDisconnectSubscriber(IIncomingMessage Message)
+        {
+            bool RetValue = true;
+
+            // get msg application data
+            var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as MsgData;
+
+            Logger.InfoFormat("Ricevuto Messaggio {1} da {0}", Message.SourceApplicationName, MsgData.validation);
+
+            RetValue = MsgData.validation;
+
+            model.ConnectionState = false;
+
+            return RetValue;
+        }
+
+        private bool ResultConnectSubscriber(IIncomingMessage Message)
+        {
+            bool RetValue = true;
+
+            // get msg application data
+            var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as MsgData;
+
+            Logger.InfoFormat("Ricevuto Messaggio {1} da {0}", Message.SourceApplicationName, MsgData.validation);
+
+            RetValue = MsgData.validation;
+
+            model.ConnectionState = true;
+
+            return RetValue;
+        }
+
+        private bool ResultConnectPLC(IIncomingMessage Message)
+        {
+            bool RetValue = true;
+
+            // get msg application data
+            var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as PLCConnectionData;
+
+            Logger.InfoFormat("Ricevuto Messaggio {1}/{2}:{3} da {0}", Message.SourceApplicationName, MsgData.PLCName, MsgData.IpAddress, MsgData.validation);
+
+            RetValue=MsgData.validation;
+            
+            if (MsgData.validation)
+            {
+                var plc = model.ListPLCItems.FirstOrDefault(item => item.Name == MsgData.PLCName );
+                if (plc != null)
+                {
+                    RetValue=RequestPLCStatus(plc.Name);
+                }
+            }
+
+            return RetValue;
+        }
+
+        private bool ResultDisconnectPLC(IIncomingMessage Message)
+        {
+            bool RetValue = true;
+
+            // get msg application data
+            var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as PLCData;
+
+            Logger.InfoFormat("Ricevuto Messaggio {1} da {0}", Message.SourceApplicationName, MsgData.PLCName);
+
+            RetValue = MsgData.validation;
+
+            if (MsgData.validation)
+            {
+                var plc = model.ListPLCItems.FirstOrDefault(item => item.Name == MsgData.PLCName);
+                if (plc != null)
+                {
+                    // reentrant... approfondire
+                    Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+                    {
+                        model.ListPLCItems.Remove(plc);
+                    }));
+                }
+            }
+
+            return RetValue;
+        }
+
+
+
+        private bool ResultSubscribePLCTag(IIncomingMessage Message)
+        {
+            bool RetValue = true;
+
+            // get msg application data
+            var MsgData = GeneralHelper.DeserializeObject(Message.MessageData) as PLCTagData;
+
+            Logger.InfoFormat("Ricevuto Messaggio {1}/{2}:{3} da {0}", Message.SourceApplicationName, MsgData.Tag.PLCName, MsgData.Tag.Address, MsgData.Tag.Value);
+
+            TagItem tag = new TagItem() { PLCName = MsgData.Tag.PLCName, Name = MsgData.Tag.Address };
+            if (tag != null)
+            {
+                Logger.InfoFormat("Aggiunto {0}/{1}:{2}", tag.PLCName, tag.Address, tag.Type);
+
+                /* verifica il nome del plc tag */
+                model.ListTagItems.Add(tag);
+            }
+            return RetValue;
+        }
+
 
         private bool PLCTagChanged(IIncomingMessage Message)
         {
