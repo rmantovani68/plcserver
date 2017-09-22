@@ -1,0 +1,9 @@
+Documentazione progetto PLCServer
+
+Componenti :
+
+S7NetWrapper
+Si tratta come intuibile dal nome di un wrapper per la libreria S7.net in versione v2.0.50727
+..\packages\S7netplus.0.1.4\lib\net45\S7.Net.dll
+
+S7NetPlcDriver.cs : implementa la classe S7NetPlcDriver
