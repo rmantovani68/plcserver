@@ -126,7 +126,6 @@ namespace plcserver
             {
                 throw new ArgumentException("Ip address is not valid");
             }
-            //plcDriver = new S7NetPlcDriver(CpuType.S7300, ipAddress, 0, 2);
             plcDriver = new S7NetPlcDriver(Cputype, IpAddress, Rack, Slot);
             plcDriver.Connect();
 
@@ -158,7 +157,7 @@ namespace plcserver
                 return false;
             }
 
-            /* controllo la validità del tag */
+            // controllo la validità del tag
             var tag = new Tag(name);
 
             try 
@@ -301,16 +300,14 @@ namespace plcserver
 
                 var new_TagsList = plcDriver.ReadItems(old_TagsList);
 
-                /*
-                * ora occorre notificare i cambiamenti ai sottoscriventi
-                */
+                // ora occorre notificare i cambiamenti ai sottoscriventi
                 foreach (var Item in new_TagsList)
                 {
                     if (m_Tags.ContainsKey(Item.ItemName))
                     {
                         if (!Item.ItemValue.Equals(m_Tags[Item.ItemName].ItemValue))
                         {
-                            /* valore sottoscritto cambiato */
+                            // valore sottoscritto cambiato
                             if (TagChangedValue != null)
                             {
                                 //Raise event
@@ -319,13 +316,13 @@ namespace plcserver
 
                                 TagChangedValue(this, new TagChangedValueEventArgs { PLCName = this.PlcName, Tag = _Tag });
                             }
-                            /* attualizzo */
+                            // attualizzo
                             m_Tags[Item.ItemName].ItemValue = Item.ItemValue;
                         }
                     }
                     else
                     {
-                        /* tag non presente in lista */
+                        // tag non presente in lista
                     }
 
                 }

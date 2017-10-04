@@ -104,7 +104,8 @@ namespace HmiExample
         /// <summary>
         /// Connette a plcserver
         /// </summary>
-        /// <returns></returns>
+        /// <returns>true if connected </returns>
+        /// <returns>false if not connected</returns>
         private bool PLCServerConnect()
         {
             bool RetValue = true;
@@ -150,7 +151,8 @@ namespace HmiExample
         /// <summary>
         /// Disconnette da plcserver
         /// </summary>
-        /// <returns></returns>
+        /// <returns>true if all ok</returns>
+        /// <returns>false if not</returns>
         private bool PLCServerDisconnect()
         {
             bool RetValue = true;
@@ -230,7 +232,7 @@ namespace HmiExample
         {
             bool RetValue = true;
 
-            // se già presente non lo agiungo
+            // se già presente non lo aggiungo
             if (model.ListTagItems.Contains(tag))
             {
                 Logger.InfoFormat("tag {0}/{1} già presente", tag.PLCName, tag.Address);
@@ -438,7 +440,7 @@ namespace HmiExample
         /// <summary>
         /// This method handles received messages from other applications via DotNetMQ.
         /// </summary>
-        /// <param name="sender"></param>
+        /// <param name="sender">Sender of the message</param>
         /// <param name="e">Message parameters</param>
         private void hmi_MessageReceived(object sender, MessageReceivedEventArgs e)
         {
@@ -459,14 +461,14 @@ namespace HmiExample
 
                 switch (MsgData.MsgCode)
                 {
-                    case MsgCodes.PLCTagsChanged:          /* gestione da fare */            break;
-                    case MsgCodes.PLCTagChanged:           PLCTagChanged(Message);           break;
-                    case MsgCodes.PLCStatus:               PLCStatus(Message);               break;
+                    case MsgCodes.PLCTagsChanged:          /* gestione da fare */                  break;
+                    case MsgCodes.PLCTagChanged:              PLCTagChanged(Message);              break;
+                    case MsgCodes.PLCStatus:                  PLCStatus(Message);                  break;
 
-                    case MsgCodes.ResultSubscribePLCTag:   ResultSubscribePLCTag(Message);   break;
-                    case MsgCodes.ResultSubscribePLCTags:           break;
-                    case MsgCodes.ResultSetPLCTag:                  break;
-                    case MsgCodes.ResultSetPLCTags:                 break;
+                    case MsgCodes.ResultSubscribePLCTag:      ResultSubscribePLCTag(Message);      break;
+                    case MsgCodes.ResultSubscribePLCTags:                                          break;
+                    case MsgCodes.ResultSetPLCTag:                                                 break;
+                    case MsgCodes.ResultSetPLCTags:                                                break;
                     case MsgCodes.ResultConnectSubscriber:    ResultConnectSubscriber(Message);    break;
                     case MsgCodes.ResultDisconnectSubscriber: ResultDisconnectSubscriber(Message); break;
                     case MsgCodes.ResultConnectPLC:           ResultConnectPLC(Message);           break;

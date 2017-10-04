@@ -146,6 +146,7 @@ namespace HmiExample
         public bool Connection(string sender, string destination)
         {
             bool RetValue = true;
+
             //Create a DotNetMQ Message to send 
             var message = MDSClientInstance.CreateMessage();
 

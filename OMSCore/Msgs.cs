@@ -61,14 +61,16 @@ namespace OMS.Core.Communication
         SubscribeProperties,          // SENDER   -> MANAGER   : sottoscrizione di un lista di properties  PropertiesData             X
         RemoveProperty,               // SENDER   -> MANAGER   : rimozione di una property                 PropertyData               X
         RemoveProperties,             // SENDER   -> MANAGER   : rimozione di un lista di properties       PropertiesData             X
+        GetSubscribedProperties,      // SENDER   -> MANAGER   : Richiede lista delle props sottoscritte   MsgData                    X     
 //      ---------------                  --------    ---------   ----------------------------------------- ----------------------- -------- 
         ResultSubscribeProperty,      // MANAGER  -> SENDER    : risposta a ...                            PropertyData               
         ResultSubscribeProperties,    // MANAGER  -> SENDER    : risposta a ...                            PropertiesData             
         ResultRemoveProperty,         // MANAGER  -> SENDER    : risposta a ...                            PropertyData               
         ResultRemoveProperties,       // MANAGER  -> SENDER    : risposta a ...                            PropertiesData             
 //      ---------------                  --------    ---------   ----------------------------------------- ----------------------- -------- 
-        PropertyChanged,              // MANAGER  -> SUBSCRIBER: prop cambiata                             PropertyData 
-        PropertiesChanged,            // MANAGER  -> SUBSCRIBER: lista prop cambiate                       PropertiesData 
+        PropertyChanged,              // MANAGER  -> SUBSCRIBER: prop cambiata                             PropertyData
+        PropertiesChanged,            // MANAGER  -> SUBSCRIBER: lista prop cambiate                       PropertiesData
+        SubscribedProperties,         // MANAGER  -> SUBSCRIBER: lista props sottoscritte                  PropertiesData
     };
 
     //

@@ -11,6 +11,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "plcserver", "plcserver\plcs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OMSCore", "OMSCore\OMSCore.csproj", "{2495D0D3-461F-4E67-9CED-B311F1F9EF33}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{0100AB06-8873-41A0-B038-B2D0148A82CC}"
+	ProjectSection(SolutionItems) = preProject
+		DOC.TXT = DOC.TXT
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

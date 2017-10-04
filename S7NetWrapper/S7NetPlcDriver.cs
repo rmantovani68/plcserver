@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 
 namespace S7NetWrapper
 {
+    /// <summary>
+    /// <
+    /// </summary>
     public class S7NetPlcDriver : IPlcSyncDriver
     {
         #region Private fields

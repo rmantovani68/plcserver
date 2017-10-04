@@ -303,7 +303,7 @@ namespace plcserver
                 RetValue = ConnectPLC(MsgData);
             }
 
-            /* invio messaggio di risposta generica */
+            // invio messaggio di risposta generica
             return SendResponse(Message, MsgCodes.ResultConnectPLC, MsgData, RetValue);
         }
 
@@ -326,15 +326,14 @@ namespace plcserver
             {
                 try
                 {
-                    /* Disconnetto */
                     var plc = _PLCs[PLC.PLCName];
 
+                    // Disconnetto 
                     plc.Disconnect();
 
-                    /* elimino dalla lista */
+                    // elimino dalla lista
                     _PLCs.Remove(PLC.PLCName);
 
-                    /* elimino le sottoscrizioni associate */
                 }
                 catch (Exception exc)
                 {
@@ -372,7 +371,7 @@ namespace plcserver
                 RetValue = DisconnectPLC(MsgData);
             }
 
-            /* invio messaggio di risposta generica */
+            // invio messaggio di risposta generica
             return SendResponse(Message, MsgCodes.ResultDisconnectPLC, MsgData, RetValue);
         }
 
@@ -393,7 +392,7 @@ namespace plcserver
 
             if (RetValue == true)
             {
-                /* verifico esistenza PLC interessato */
+                // verifico esistenza PLC interessato
                 if (!_PLCs.ContainsKey(tag.PLCName))
                 {
                     // log
@@ -405,7 +404,7 @@ namespace plcserver
                 {
                     try
                     {
-                        /* aggiungo tag */
+                        // aggiungo tag
                         _PLCs[tag.PLCName].AddTag(tag.Address);
 
                         // gestione subscriptions
@@ -449,7 +448,7 @@ namespace plcserver
             {
 
 
-                /* verifico esistenza PLC interessato */
+                // verifico esistenza PLC interessato
                 if (!_PLCs.ContainsKey(tag.PLCName))
                 {
                     Logger.WarnFormat("PLC [{0}] not present", tag.PLCName);
@@ -460,7 +459,7 @@ namespace plcserver
                 {
                     try
                     {
-                        /* rimuovo tag */
+                        // rimuovo tag
                         _PLCs[tag.PLCName].RemoveTag(tag.Address);
 
                         // gestione subscriptions
@@ -498,7 +497,7 @@ namespace plcserver
 
             RetValue = SubscribePLCTag(Message.SourceApplicationName, tag);
 
-            /* invio messaggio di risposta generica */
+            // invio messaggio di risposta generica
             return SendResponse(Message, MsgCodes.ResultSubscribePLCTag, MsgData, RetValue);
         }
 
@@ -517,7 +516,7 @@ namespace plcserver
 
             RetValue = RemovePLCTag(Message.SourceApplicationName, tag);
 
-            /* invio messaggio di risposta generica */
+            // invio messaggio di risposta generica
             return SendResponse(Message, MsgCodes.ResultRemovePLCTag, MsgData, RetValue);
         }
 
@@ -552,7 +551,7 @@ namespace plcserver
                 }
             }
 
-            /* invio messaggio di risposta generica */
+            // invio messaggio di risposta generica
             return SendResponse(Message, MsgCodes.ResultSubscribePLCTags, MsgData, RetValue);
         }
 
@@ -586,7 +585,7 @@ namespace plcserver
                 }
             }
 
-            /* invio messaggio di risposta generica */
+            // invio messaggio di risposta generica
             return SendResponse(Message, MsgCodes.ResultRemovePLCTags, MsgData, RetValue);
         }
 
@@ -613,7 +612,7 @@ namespace plcserver
             }
             else
             {
-                /* costruisco la lista da inviare come risposta */
+                // costruisco la lista da inviare come risposta
                 foreach (var sub in _Subs[Message.SourceApplicationName].ToList())
                 {
                     var tag = new PLCTag() { PLCName = sub.PLCName, Address = sub.TagAddress, Validation=true };
@@ -621,7 +620,7 @@ namespace plcserver
                 }
             }
 
-            /* invio messaggio di risposta generica */
+            // invio messaggio di risposta generica
             return SendResponse(Message, MsgCodes.SubscribedPLCTags, new PLCTagsData(){MsgCode = MsgCodes.SubscribedPLCTags,Tags = tagslist}, RetValue);
         }
 
@@ -666,7 +665,7 @@ namespace plcserver
             {
                 var tag = tagslist[i];
 
-                /* verifico connessione/esistenza PLC interessato */
+                // verifico connessione/esistenza PLC interessato
                 if (!_PLCs.ContainsKey(tag.PLCName))
                 {
                     // log
@@ -678,7 +677,7 @@ namespace plcserver
                 {
                     try
                     {
-                        /* scrivo tag */
+                        // scrivo tag
                         var plctag = new S7NetWrapper.Tag(tag.Address, tag.Value);
                         _PLCs[tag.PLCName].Write(plctag);
                         tag.Validation = true;
@@ -693,7 +692,7 @@ namespace plcserver
                 }
             }
 
-            /* invio messaggio di risposta generica */
+            // invio messaggio di risposta generica
             return SendResponse(Message, MsgCodes.ResultSetPLCTags, MsgData, RetValue);
         }
 
@@ -717,7 +716,7 @@ namespace plcserver
             {
                 var tag = tagslist[i];
 
-                /* verifico connessione/esistenza PLC interessato */
+                // verifico connessione/esistenza PLC interessato
                 if (!_PLCs.ContainsKey(tag.PLCName))
                 {
                     // log
@@ -747,7 +746,7 @@ namespace plcserver
                 }
             }
 
-            /* invio messaggio di risposta generica */
+            // invio messaggio di risposta generica
             return SendResponse(Message, MsgCodes.ResultGetPLCTags, new PLCTagsData() { MsgCode = MsgCodes.ResultGetPLCTags, Tags = tagslist }, RetValue);
         }
 
@@ -803,7 +802,7 @@ namespace plcserver
 
             RetValue=SetPLCTag(tag);
 
-            /* invio messaggio di risposta generica */
+            // invio messaggio di risposta generica
             return SendResponse(Message, MsgCodes.ResultSetPLCTag, MsgData, RetValue);
         }
 
@@ -864,7 +863,7 @@ namespace plcserver
 
             RetValue = GetPLCTag(ref tag);
 
-            /* invio messaggio di risposta */
+            // invio messaggio di risposta generica
             return SendResponse(Message, MsgCodes.ResultGetPLCTag, MsgData, RetValue);
         }
 
@@ -908,8 +907,8 @@ namespace plcserver
                         break;
                 }
             }
-            
-            /* invio messaggio di risposta */
+
+            // invio messaggio di risposta generica
             return SendResponse(Message, MsgCodes.PLCStatus, new PLCStatusData { PLCName = MsgData.PLCName, Status = ConnectionStatus }, RetValue);
         }
 
